@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Key Shooter</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #05050f;
+      overflow: hidden;
+      height: 100vh;
+      font-family: 'Courier New', monospace;
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      color: rgba(255,255,255,0.18);
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    #score {
+      position: fixed;
+      top: 20px;
+      right: 28px;
+      color: rgba(255,255,255,0.22);
+      font-size: 13px;
+      letter-spacing: 2px;
+      pointer-events: none;
+    }
+
+    .bullet {
+      position: fixed;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #fff;
+      text-align: center;
+      line-height: 1.1;
+      pointer-events: none;
+      animation: shoot var(--dur) cubic-bezier(0.15, 0.7, 0.35, 1) forwards;
+    }
+
+    .bullet::after {
+      content: '';
+      position: absolute;
+      bottom: -26px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 30px;
+      background: inherit;
+      border-radius: 3px;
+      opacity: 0.4;
+      filter: blur(3px);
+    }
+
+    @keyframes shoot {
+      0%   { bottom: 80px; opacity: 1; transform: scale(1); }
+      80%  { opacity: 1; }
+      100% { bottom: 110vh;  opacity: 0; transform: scale(0.5); }
+    }
+
+    .star {
+      position: fixed;
+      border-radius: 50%;
+      background: white;
+      animation: twinkle var(--t) infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes twinkle {
+      from { opacity: 0.07; }
+      to   { opacity: 0.55; }
+    }
+  </style>
+</head>
+<body>
+  <div id="hint">Press any key to shoot</div>
+  <div id="score">SHOTS: <span id="count">0</span></div>
+
+  <script>
+    // ── Starfield ────────────────────────────────────────────────
+    for (let i = 0; i < 120; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const sz = Math.random() * 2 + 1;
+      s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}vw;top:${Math.random()*100}vh;--t:${(Math.random()*3+1).toFixed(1)}s;animation-delay:${(Math.random()*3).toFixed(1)}s`;
+      document.body.appendChild(s);
+    }
+
+    // ── Audio ────────────────────────────────────────────────────
+    const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+    function pew() {
+      const osc  = AC.createOscillator();
+      const gain = AC.createGain();
+      osc.connect(gain);
+      gain.connect(AC.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(780, AC.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(70, AC.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.22, AC.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 0.3);
+      osc.start(AC.currentTime);
+      osc.stop(AC.currentTime + 0.3);
+    }
+
+    // ── X positions by e.code (so Left/Right modifiers split correctly) ──
+    // Fractions of screen width, based on real QWERTY key offsets.
+    const CODE_X = {
+      // Escape + F-row
+      'Escape':0.035,
+      'F1':0.112,'F2':0.160,'F3':0.208,'F4':0.256,
+      'F5':0.328,'F6':0.376,'F7':0.424,'F8':0.472,
+      'F9':0.544,'F10':0.592,'F11':0.640,'F12':0.688,
+
+      // Number row
+      'Backquote':0.105,
+      'Digit1':0.158,'Digit2':0.217,'Digit3':0.275,'Digit4':0.334,'Digit5':0.392,
+      'Digit6':0.451,'Digit7':0.510,'Digit8':0.568,'Digit9':0.627,'Digit0':0.685,
+      'Minus':0.744,'Equal':0.802,'Backspace':0.888,
+
+      // QWERTY row
+      'Tab':0.114,
+      'KeyQ':0.187,'KeyW':0.246,'KeyE':0.304,'KeyR':0.363,'KeyT':0.422,
+      'KeyY':0.480,'KeyU':0.539,'KeyI':0.597,'KeyO':0.656,'KeyP':0.714,
+      'BracketLeft':0.773,'BracketRight':0.831,'Backslash':0.876,
+
+      // Home row
+      'CapsLock':0.118,
+      'KeyA':0.202,'KeyS':0.260,'KeyD':0.319,'KeyF':0.378,'KeyG':0.436,
+      'KeyH':0.495,'KeyJ':0.553,'KeyK':0.612,'KeyL':0.671,
+      'Semicolon':0.729,'Quote':0.788,'Enter':0.888,
+
+      // Bottom row
+      'ShiftLeft':0.055,
+      'KeyZ':0.231,'KeyX':0.290,'KeyC':0.348,'KeyV':0.407,'KeyB':0.465,
+      'KeyN':0.524,'KeyM':0.583,'Comma':0.641,'Period':0.700,'Slash':0.758,
+      'ShiftRight':0.908,
+
+      // Modifier row
+      'ControlLeft':0.045,'AltLeft':0.138,'MetaLeft':0.212,
+      'Space':0.500,
+      'MetaRight':0.720,'AltRight':0.794,'ControlRight':0.932,
+
+      // Navigation cluster
+      'Insert':0.820,'Home':0.862,'PageUp':0.904,
+      'Delete':0.820,'End':0.862,'PageDown':0.904,
+      'ArrowLeft':0.766,'ArrowDown':0.810,'ArrowRight':0.854,'ArrowUp':0.810,
+
+      // Numpad
+      'NumLock':0.740,'NumpadDivide':0.780,'NumpadMultiply':0.820,'NumpadSubtract':0.860,
+      'Numpad7':0.740,'Numpad8':0.780,'Numpad9':0.820,'NumpadAdd':0.860,
+      'Numpad4':0.740,'Numpad5':0.780,'Numpad6':0.820,
+      'Numpad1':0.740,'Numpad2':0.780,'Numpad3':0.820,'NumpadEnter':0.860,
+      'Numpad0':0.760,'NumpadDecimal':0.820,
+    };
+
+    // ── Display labels ───────────────────────────────────────────
+    const KEY_LABEL = {
+      ' ':'SPC', 'Tab':'⇥', 'Enter':'↵', 'Backspace':'⌫', 'Delete':'⌦',
+      'Escape':'ESC', 'CapsLock':'⇪', 'Shift':'⇧',
+      'Control':'⌃', 'Alt':'⌥', 'Meta':'⌘',
+      'ArrowUp':'↑', 'ArrowDown':'↓', 'ArrowLeft':'←', 'ArrowRight':'→',
+      'Home':'HOM', 'End':'END', 'PageUp':'PGU', 'PageDown':'PGD',
+      'Insert':'INS', 'PrintScreen':'PRT', 'ScrollLock':'SCL', 'Pause':'PAU',
+      'NumLock':'NUM',
+      'F1':'F1','F2':'F2','F3':'F3','F4':'F4','F5':'F5','F6':'F6',
+      'F7':'F7','F8':'F8','F9':'F9','F10':'F10','F11':'F11','F12':'F12',
+    };
+
+    function getLabel(e) {
+      if (KEY_LABEL[e.key]) return KEY_LABEL[e.key];
+      if (e.key.length === 1) return e.key.toUpperCase();
+      return e.key.slice(0, 4).toUpperCase();
+    }
+
+    function getFontSize(label) {
+      if (label.length <= 1) return '28px';
+      if (label.length === 2) return '20px';
+      if (label.length === 3) return '15px';
+      return '11px';
+    }
+
+    // ── Colors ───────────────────────────────────────────────────
+    const palette = [
+      '#ff6b6b','#ffd93d','#6bcb77','#4d96ff',
+      '#ff9a3c','#c77dff','#00b4d8','#f72585','#56cfe1','#80ffdb'
+    ];
+    let ci = 0, shots = 0;
+
+    // ── Shoot ────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.repeat) return;
+      e.preventDefault(); // prevent tab-switch, scroll, back-nav, etc.
+
+      if (AC.state === 'suspended') AC.resume();
+
+      pew();
+      shots++;
+      document.getElementById('count').textContent = shots;
+
+      const label = getLabel(e);
+      const color = palette[ci++ % palette.length];
+      const xFrac = CODE_X[e.code] ?? 0.5;
+      const x     = xFrac * window.innerWidth;
+      const dur   = (Math.random() * 0.5 + 1.6).toFixed(2);
+
+      const b = document.createElement('div');
+      b.className = 'bullet';
+      b.textContent = label;
+      b.style.cssText = `
+        left:${x - 34}px;
+        font-size:${getFontSize(label)};
+        background:${color};
+        box-shadow:0 0 14px ${color},0 0 36px ${color}88;
+        --dur:${dur}s;
+      `;
+
+      document.body.appendChild(b);
+      b.addEventListener('animationend', () => b.remove());
+    });
+  </script>
+</body>
+</html>
