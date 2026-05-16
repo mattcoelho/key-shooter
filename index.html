@@ -7,10 +7,41 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background: #05050f;
+      background: linear-gradient(to bottom, #1a6bbf 0%, #4da6e8 40%, #87CEEB 100%);
       overflow: hidden;
       height: 100vh;
       font-family: 'Courier New', monospace;
+    }
+
+    .cloud {
+      position: fixed;
+      background: white;
+      border-radius: 50px;
+      opacity: 0.85;
+      pointer-events: none;
+      animation: drift var(--spd) linear infinite;
+    }
+    .cloud::before, .cloud::after {
+      content: '';
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+    }
+    .cloud::before {
+      width: 60%;
+      height: 150%;
+      top: -50%;
+      left: 15%;
+    }
+    .cloud::after {
+      width: 45%;
+      height: 130%;
+      top: -35%;
+      right: 15%;
+    }
+    @keyframes drift {
+      from { transform: translateX(-300px); }
+      to   { transform: translateX(110vw); }
     }
 
     #hint {
@@ -18,21 +49,23 @@
       bottom: 20px;
       width: 100%;
       text-align: center;
-      color: rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.7);
       font-size: 12px;
       letter-spacing: 3px;
       text-transform: uppercase;
       pointer-events: none;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
 
     #score {
       position: fixed;
       top: 20px;
       right: 28px;
-      color: rgba(255,255,255,0.22);
+      color: rgba(255,255,255,0.85);
       font-size: 13px;
       letter-spacing: 2px;
       pointer-events: none;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
 
     .bullet {
@@ -71,18 +104,6 @@
       100% { bottom: 110vh;  opacity: 0; transform: scale(0.5); }
     }
 
-    .star {
-      position: fixed;
-      border-radius: 50%;
-      background: white;
-      animation: twinkle var(--t) infinite alternate;
-      pointer-events: none;
-    }
-
-    @keyframes twinkle {
-      from { opacity: 0.07; }
-      to   { opacity: 0.55; }
-    }
   </style>
 </head>
 <body>
@@ -90,13 +111,17 @@
   <div id="score">SHOTS: <span id="count">0</span></div>
 
   <script>
-    // ── Starfield ────────────────────────────────────────────────
-    for (let i = 0; i < 120; i++) {
-      const s = document.createElement('div');
-      s.className = 'star';
-      const sz = Math.random() * 2 + 1;
-      s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}vw;top:${Math.random()*100}vh;--t:${(Math.random()*3+1).toFixed(1)}s;animation-delay:${(Math.random()*3).toFixed(1)}s`;
-      document.body.appendChild(s);
+    // ── Clouds ───────────────────────────────────────────────────
+    for (let i = 0; i < 10; i++) {
+      const c = document.createElement('div');
+      c.className = 'cloud';
+      const w = Math.random() * 180 + 80;
+      const h = w * 0.4;
+      const top = Math.random() * 65;
+      const spd = Math.random() * 40 + 30;
+      const delay = -(Math.random() * spd);
+      c.style.cssText = `width:${w}px;height:${h}px;top:${top}%;left:0;--spd:${spd}s;animation-delay:${delay}s`;
+      document.body.appendChild(c);
     }
 
     // ── Audio ────────────────────────────────────────────────────
