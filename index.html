@@ -102,18 +102,34 @@
     // ── Audio ────────────────────────────────────────────────────
     const AC = new (window.AudioContext || window.webkitAudioContext)();
 
+    // C major scale across 3 octaves
+    const SCALE = [
+      130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, // C3–B3
+      261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, // C4–B4
+      523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, // C5–B5
+    ];
+    let noteIndex = 0;
+
     function pew() {
-      const osc  = AC.createOscillator();
+      const freq = SCALE[noteIndex % SCALE.length];
+      noteIndex++;
+
+      // Primary tone + octave harmonic for bell-like quality
       const gain = AC.createGain();
-      osc.connect(gain);
       gain.connect(AC.destination);
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(780, AC.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(70, AC.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.22, AC.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 0.3);
-      osc.start(AC.currentTime);
-      osc.stop(AC.currentTime + 0.3);
+
+      [freq, freq * 2].forEach((f, i) => {
+        const osc = AC.createOscillator();
+        osc.connect(gain);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, AC.currentTime);
+        osc.start(AC.currentTime);
+        osc.stop(AC.currentTime + 1.8);
+      });
+
+      gain.gain.setValueAtTime(0, AC.currentTime);
+      gain.gain.linearRampToValueAtTime(0.28, AC.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 1.8);
     }
 
     // ── X positions by e.code (so Left/Right modifiers split correctly) ──
