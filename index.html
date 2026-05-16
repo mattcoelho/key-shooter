@@ -37,8 +37,8 @@
 
     .bullet {
       position: fixed;
-      width: 68px;
-      height: 68px;
+      width: 204px;
+      height: 204px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -54,15 +54,15 @@
     .bullet::after {
       content: '';
       position: absolute;
-      bottom: -26px;
+      bottom: -78px;
       left: 50%;
       transform: translateX(-50%);
-      width: 6px;
-      height: 30px;
+      width: 18px;
+      height: 90px;
       background: inherit;
-      border-radius: 3px;
+      border-radius: 9px;
       opacity: 0.4;
-      filter: blur(3px);
+      filter: blur(6px);
     }
 
     @keyframes shoot {
@@ -187,10 +187,10 @@
     }
 
     function getFontSize(label) {
-      if (label.length <= 1) return '28px';
-      if (label.length === 2) return '20px';
-      if (label.length === 3) return '15px';
-      return '11px';
+      if (label.length <= 1) return '84px';
+      if (label.length === 2) return '60px';
+      if (label.length === 3) return '45px';
+      return '33px';
     }
 
     // ── Colors ───────────────────────────────────────────────────
@@ -215,13 +215,13 @@
       const color = palette[ci++ % palette.length];
       const xFrac = CODE_X[e.code] ?? 0.5;
       const x     = xFrac * window.innerWidth;
-      const dur   = (Math.random() * 0.5 + 1.6).toFixed(2);
+      const dur   = (Math.random() * 5 + 16).toFixed(2);
 
       const b = document.createElement('div');
       b.className = 'bullet';
       b.textContent = label;
       b.style.cssText = `
-        left:${x - 34}px;
+        left:${x - 102}px;
         font-size:${getFontSize(label)};
         background:${color};
         box-shadow:0 0 14px ${color},0 0 36px ${color}88;
