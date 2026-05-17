@@ -149,7 +149,7 @@
     // ── Audio ────────────────────────────────────────────────────
     const AC = new (window.AudioContext || window.webkitAudioContext)();
 
-    const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392.00, A4=440.00, B4=493.88,
+    const C4=261.63, D4=293.66, E4=329.63, F4=349.23, Fs4=369.99, G4=392.00, A4=440.00, B4=493.88,
           C5=523.25, D5=587.33, E5=659.25,
           D3=146.83, F3=174.61, A3=220.00, Bb3=233.08,
           Bb4=466.16, G3=196.00;
@@ -176,18 +176,13 @@
         label: 'Ants Go Marching',
         notes: [
           // "The ants go marching one by one"
-          D4, D4, F4, A4, A4, G4, F4, D4,
-          // "hurrah, hurrah"
-          D4, F4, A4, Bb4, A4, G4, F4, D4,
-          // (verse 2 same melody)
-          D4, D4, F4, A4, A4, G4, F4, D4,
-          D4, F4, A4, Bb4, A4, G4, F4, D4,
-          // "the little one stops to suck his thumb"
-          G4, F4, D4, A4, A4, G4, F4, D4, F4, A4,
-          // "and they all go marching down, to the ground, to get out of the rain"
-          Bb4, A4, G4, F4, D4, D4, F4, A4, G4, F4, D4,
-          // "boom boom boom"
-          D4, D4, D4,
+          A4, D5, D5, D5, D5, B4, A4,
+          // "hurrah, hurrah / The ants go marching one by one"
+          A4, D5, D5, D5, D5, C5, C5, B4, C5, A4,
+          // "The little one stops to suck his thumb"
+          Fs4, Fs4, G4, G4, A4, A4, B4, D4,
+          // "And they all go marching down, to the ground"
+          D4, F4, E4, D4, E4, D4, E4, D4,
         ],
       },
       row: {
