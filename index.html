@@ -27,22 +27,41 @@
       background: white;
       border-radius: 50%;
     }
-    .cloud::before {
-      width: 60%;
-      height: 150%;
-      top: -50%;
-      left: 15%;
-    }
-    .cloud::after {
-      width: 45%;
-      height: 130%;
-      top: -35%;
-      right: 15%;
-    }
+    .cloud::before { width: 60%; height: 150%; top: -50%; left: 15%; }
+    .cloud::after  { width: 45%; height: 130%; top: -35%; right: 15%; }
     @keyframes drift {
       from { transform: translateX(-300px); }
       to   { transform: translateX(110vw); }
     }
+
+    #songs {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+      white-space: nowrap;
+    }
+
+    .song-btn {
+      background: rgba(255,255,255,0.65);
+      border: 2px solid rgba(255,255,255,0.9);
+      border-radius: 24px;
+      padding: 8px 18px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      color: #1a6bbf;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.15s, color 0.15s;
+      text-shadow: none;
+    }
+    .song-btn:hover  { background: rgba(255,255,255,0.88); }
+    .song-btn.active { background: #1a6bbf; color: #fff; border-color: #1a6bbf; }
 
     #hint {
       position: fixed;
@@ -83,7 +102,6 @@
       pointer-events: none;
       animation: shoot var(--dur) cubic-bezier(0.15, 0.7, 0.35, 1) forwards;
     }
-
     .bullet::after {
       content: '';
       position: absolute;
@@ -97,16 +115,20 @@
       opacity: 0.4;
       filter: blur(6px);
     }
-
     @keyframes shoot {
       0%   { bottom: 80px; opacity: 1; transform: scale(1); }
       80%  { opacity: 1; }
-      100% { bottom: 110vh;  opacity: 0; transform: scale(0.5); }
+      100% { bottom: 110vh; opacity: 0; transform: scale(0.5); }
     }
-
   </style>
 </head>
 <body>
+  <div id="songs">
+    <button class="song-btn active" data-song="abc">ABC Song</button>
+    <button class="song-btn" data-song="ants">Ants Go Marching</button>
+    <button class="song-btn" data-song="row">Row Your Boat</button>
+    <button class="song-btn" data-song="wheels">Wheels on the Bus</button>
+  </div>
   <div id="hint">Press any key to shoot</div>
   <div id="score">SHOTS: <span id="count">0</span></div>
 
@@ -127,33 +149,96 @@
     // ── Audio ────────────────────────────────────────────────────
     const AC = new (window.AudioContext || window.webkitAudioContext)();
 
-    // ABC Song (Twinkle Twinkle) — C major
-    const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392.00, A4=440.00;
-    const MELODY = [
-      // "A B C D E F G"
-      C4, C4, G4, G4, A4, A4, G4,
-      // "H I J K L-M-N-O-P"
-      F4, F4, E4, E4, D4, D4, C4,
-      // "Q R S, T U V"
-      G4, G4, F4, F4, E4, E4, D4,
-      // "W X, Y and Z"
-      G4, G4, F4, F4, E4, E4, D4,
-      // "Now I know my A-B-Cs"
-      C4, C4, G4, G4, A4, A4, G4,
-      // "Next time won't you sing with me"
-      F4, F4, E4, E4, D4, D4, C4,
-    ];
-    let noteIndex = 0;
+    const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392.00, A4=440.00, B4=493.88,
+          C5=523.25, D5=587.33, E5=659.25,
+          D3=146.83, F3=174.61, A3=220.00, Bb3=233.08,
+          Bb4=466.16, G3=196.00;
+
+    const SONGS = {
+      abc: {
+        label: 'ABC Song',
+        notes: [
+          // "A B C D E F G"
+          C4, C4, G4, G4, A4, A4, G4,
+          // "H I J K L-M-N-O-P"
+          F4, F4, E4, E4, D4, D4, C4,
+          // "Q R S, T U V"
+          G4, G4, F4, F4, E4, E4, D4,
+          // "W X, Y and Z"
+          G4, G4, F4, F4, E4, E4, D4,
+          // "Now I know my ABCs"
+          C4, C4, G4, G4, A4, A4, G4,
+          // "Next time won't you sing with me"
+          F4, F4, E4, E4, D4, D4, C4,
+        ],
+      },
+      ants: {
+        label: 'Ants Go Marching',
+        notes: [
+          // "The ants go marching one by one"
+          D4, F4, A4, A4, G4, F4, D4, D4,
+          // "hurrah, hurrah"
+          F4, A4, Bb4, A4, G4, F4, D4,
+          // (repeat)
+          D4, F4, A4, A4, G4, F4, D4, D4,
+          F4, A4, Bb4, A4, G4, F4, D4,
+          // "the little one stops to suck his thumb"
+          G4, F4, D4, D4, A4, A4, G4, F4, D4, F4, A4,
+          // "and they all go marching down, to the ground, to get out of the rain"
+          Bb4, A4, G4, F4, D4, D4, F4, A4, A4, G4, F4, D4, D4,
+          // "Boom boom boom"
+          D4, D4, D4,
+        ],
+      },
+      row: {
+        label: 'Row Your Boat',
+        notes: [
+          // "Row row row your boat"
+          C4, C4, C4, D4, E4,
+          // "gently down the stream"
+          E4, D4, E4, F4, G4,
+          // "merrily merrily merrily merrily"
+          C5, C5, C5, G4, G4, G4, E4, E4, E4, C4, C4, C4,
+          // "life is but a dream"
+          G4, F4, E4, D4, C4,
+        ],
+      },
+      wheels: {
+        label: 'Wheels on the Bus',
+        notes: [
+          // "The wheels on the bus go round and round"
+          G4, G4, G4, G4, G4, A4, G4,
+          // "round and round, round and round"
+          F4, F4, E4, F4, F4, E4,
+          // "The wheels on the bus go round and round"
+          G4, G4, G4, G4, G4, A4, G4,
+          // "all through the town"
+          F4, E4, D4, C4,
+        ],
+      },
+    };
+
+    let currentSong = 'abc';
+    let noteIndex   = 0;
+
+    document.querySelectorAll('.song-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentSong = btn.dataset.song;
+        noteIndex   = 0;
+        document.querySelectorAll('.song-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
 
     function pew() {
-      const freq = MELODY[noteIndex % MELODY.length];
+      const notes = SONGS[currentSong].notes;
+      const freq  = notes[noteIndex % notes.length];
       noteIndex++;
 
-      // Primary tone + octave harmonic for bell-like quality
       const gain = AC.createGain();
       gain.connect(AC.destination);
 
-      [freq, freq * 2].forEach((f, i) => {
+      [freq, freq * 2].forEach(f => {
         const osc = AC.createOscillator();
         osc.connect(gain);
         osc.type = 'sine';
@@ -167,50 +252,34 @@
       gain.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 1.8);
     }
 
-    // ── X positions by e.code (so Left/Right modifiers split correctly) ──
-    // Fractions of screen width, based on real QWERTY key offsets.
+    // ── X positions by e.code ────────────────────────────────────
     const CODE_X = {
-      // Escape + F-row
       'Escape':0.035,
       'F1':0.112,'F2':0.160,'F3':0.208,'F4':0.256,
       'F5':0.328,'F6':0.376,'F7':0.424,'F8':0.472,
       'F9':0.544,'F10':0.592,'F11':0.640,'F12':0.688,
-
-      // Number row
       'Backquote':0.105,
       'Digit1':0.158,'Digit2':0.217,'Digit3':0.275,'Digit4':0.334,'Digit5':0.392,
       'Digit6':0.451,'Digit7':0.510,'Digit8':0.568,'Digit9':0.627,'Digit0':0.685,
       'Minus':0.744,'Equal':0.802,'Backspace':0.888,
-
-      // QWERTY row
       'Tab':0.114,
       'KeyQ':0.187,'KeyW':0.246,'KeyE':0.304,'KeyR':0.363,'KeyT':0.422,
       'KeyY':0.480,'KeyU':0.539,'KeyI':0.597,'KeyO':0.656,'KeyP':0.714,
       'BracketLeft':0.773,'BracketRight':0.831,'Backslash':0.876,
-
-      // Home row
       'CapsLock':0.118,
       'KeyA':0.202,'KeyS':0.260,'KeyD':0.319,'KeyF':0.378,'KeyG':0.436,
       'KeyH':0.495,'KeyJ':0.553,'KeyK':0.612,'KeyL':0.671,
       'Semicolon':0.729,'Quote':0.788,'Enter':0.888,
-
-      // Bottom row
       'ShiftLeft':0.055,
       'KeyZ':0.231,'KeyX':0.290,'KeyC':0.348,'KeyV':0.407,'KeyB':0.465,
       'KeyN':0.524,'KeyM':0.583,'Comma':0.641,'Period':0.700,'Slash':0.758,
       'ShiftRight':0.908,
-
-      // Modifier row
       'ControlLeft':0.045,'AltLeft':0.138,'MetaLeft':0.212,
       'Space':0.500,
       'MetaRight':0.720,'AltRight':0.794,'ControlRight':0.932,
-
-      // Navigation cluster
       'Insert':0.820,'Home':0.862,'PageUp':0.904,
       'Delete':0.820,'End':0.862,'PageDown':0.904,
       'ArrowLeft':0.766,'ArrowDown':0.810,'ArrowRight':0.854,'ArrowUp':0.810,
-
-      // Numpad
       'NumLock':0.740,'NumpadDivide':0.780,'NumpadMultiply':0.820,'NumpadSubtract':0.860,
       'Numpad7':0.740,'Numpad8':0.780,'Numpad9':0.820,'NumpadAdd':0.860,
       'Numpad4':0.740,'Numpad5':0.780,'Numpad6':0.820,
@@ -218,14 +287,13 @@
       'Numpad0':0.760,'NumpadDecimal':0.820,
     };
 
-    // ── Display labels ───────────────────────────────────────────
     const KEY_LABEL = {
-      ' ':'SPC', 'Tab':'⇥', 'Enter':'↵', 'Backspace':'⌫', 'Delete':'⌦',
-      'Escape':'ESC', 'CapsLock':'⇪', 'Shift':'⇧',
-      'Control':'⌃', 'Alt':'⌥', 'Meta':'⌘',
-      'ArrowUp':'↑', 'ArrowDown':'↓', 'ArrowLeft':'←', 'ArrowRight':'→',
-      'Home':'HOM', 'End':'END', 'PageUp':'PGU', 'PageDown':'PGD',
-      'Insert':'INS', 'PrintScreen':'PRT', 'ScrollLock':'SCL', 'Pause':'PAU',
+      ' ':'SPC','Tab':'⇥','Enter':'↵','Backspace':'⌫','Delete':'⌦',
+      'Escape':'ESC','CapsLock':'⇪','Shift':'⇧',
+      'Control':'⌃','Alt':'⌥','Meta':'⌘',
+      'ArrowUp':'↑','ArrowDown':'↓','ArrowLeft':'←','ArrowRight':'→',
+      'Home':'HOM','End':'END','PageUp':'PGU','PageDown':'PGD',
+      'Insert':'INS','PrintScreen':'PRT','ScrollLock':'SCL','Pause':'PAU',
       'NumLock':'NUM',
       'F1':'F1','F2':'F2','F3':'F3','F4':'F4','F5':'F5','F6':'F6',
       'F7':'F7','F8':'F8','F9':'F9','F10':'F10','F11':'F11','F12':'F12',
@@ -244,17 +312,17 @@
       return '33px';
     }
 
-    // ── Colors ───────────────────────────────────────────────────
     const palette = [
       '#ff6b6b','#ffd93d','#6bcb77','#4d96ff',
       '#ff9a3c','#c77dff','#00b4d8','#f72585','#56cfe1','#80ffdb'
     ];
     let ci = 0, shots = 0;
 
-    // ── Shoot ────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
       if (e.repeat) return;
-      e.preventDefault(); // prevent tab-switch, scroll, back-nav, etc.
+      // Don't hijack button clicks via keyboard (Tab/Enter on focused button handled by browser)
+      if (document.activeElement && document.activeElement.classList.contains('song-btn')) return;
+      e.preventDefault();
 
       if (AC.state === 'suspended') AC.resume();
 
