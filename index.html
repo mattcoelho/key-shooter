@@ -127,23 +127,21 @@
     // ── Audio ────────────────────────────────────────────────────
     const AC = new (window.AudioContext || window.webkitAudioContext)();
 
-    // The Ants Go Marching — D minor
-    const D4=293.66, F4=349.23, G4=392.00, A4=440.00, Bb4=466.16;
+    // ABC Song (Twinkle Twinkle) — C major
+    const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392.00, A4=440.00;
     const MELODY = [
-      // "The ants go marching one by one"
-      D4, F4, A4, A4, G4, F4, D4, D4,
-      // "hurrah, hurrah"
-      F4, A4, Bb4, A4, G4, F4, D4,
-      // "The ants go marching one by one" (repeat)
-      D4, F4, A4, A4, G4, F4, D4, D4,
-      // "hurrah, hurrah" (repeat)
-      F4, A4, Bb4, A4, G4, F4, D4,
-      // "the little one stops to suck his thumb"
-      G4, F4, D4, D4, A4, A4, G4, F4, D4, F4, A4,
-      // "and they all go marching down, to the ground, to get out of the rain"
-      Bb4, A4, G4, F4, D4, D4, F4, A4, A4, G4, F4, D4, D4,
-      // "Boom boom boom"
-      D4, D4, D4,
+      // "A B C D E F G"
+      C4, C4, G4, G4, A4, A4, G4,
+      // "H I J K L-M-N-O-P"
+      F4, F4, E4, E4, D4, D4, C4,
+      // "Q R S, T U V"
+      G4, G4, F4, F4, E4, E4, D4,
+      // "W X, Y and Z"
+      G4, G4, F4, F4, E4, E4, D4,
+      // "Now I know my A-B-Cs"
+      C4, C4, G4, G4, A4, A4, G4,
+      // "Next time won't you sing with me"
+      F4, F4, E4, E4, D4, D4, C4,
     ];
     let noteIndex = 0;
 
