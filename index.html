@@ -14,26 +14,6 @@
       font-family: 'Courier New', monospace;
     }
 
-    .cloud {
-      position: fixed;
-      background: white;
-      border-radius: 50px;
-      opacity: 0.85;
-      pointer-events: none;
-      animation: drift var(--spd) linear infinite;
-    }
-    .cloud::before, .cloud::after {
-      content: '';
-      position: absolute;
-      background: white;
-      border-radius: 50%;
-    }
-    .cloud::before { width: 60%; height: 150%; top: -50%; left: 15%; }
-    .cloud::after  { width: 45%; height: 130%; top: -35%; right: 15%; }
-    @keyframes drift {
-      from { transform: translateX(-300px); }
-      to   { transform: translateX(110vw); }
-    }
 
     #songs {
       position: fixed;
@@ -134,19 +114,6 @@
   <div id="score">SHOTS: <span id="count">0</span></div>
 
   <script>
-    // ── Clouds ───────────────────────────────────────────────────
-    for (let i = 0; i < 10; i++) {
-      const c = document.createElement('div');
-      c.className = 'cloud';
-      const w = Math.random() * 180 + 80;
-      const h = w * 0.4;
-      const top = Math.random() * 65;
-      const spd = Math.random() * 40 + 30;
-      const delay = -(Math.random() * spd);
-      c.style.cssText = `width:${w}px;height:${h}px;top:${top}%;left:0;--spd:${spd}s;animation-delay:${delay}s`;
-      document.body.appendChild(c);
-    }
-
     // ── Audio ────────────────────────────────────────────────────
     const AC = new (window.AudioContext || window.webkitAudioContext)();
 
