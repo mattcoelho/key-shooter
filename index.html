@@ -314,6 +314,8 @@
         --dur:${dur}s;
       `;
 
+      const live = document.querySelectorAll('.bullet');
+      if (live.length >= 12) live[0].remove();
       document.body.appendChild(b);
       b.addEventListener('animationend', () => b.remove());
     });
