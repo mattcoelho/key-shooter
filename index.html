@@ -301,7 +301,7 @@
       const color = palette[ci++ % palette.length];
       const xFrac = CODE_X[e.code] ?? 0.5;
       const x     = xFrac * window.innerWidth;
-      const dur   = (Math.random() * 5 + 16).toFixed(2);
+      const dur   = (Math.random() * 3 + 4).toFixed(2);
 
       const b = document.createElement('div');
       b.className = 'bullet';
