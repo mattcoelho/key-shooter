@@ -106,6 +106,7 @@
 <body>
   <div id="songs">
     <button class="song-btn active" data-song="abc">ABC Song</button>
+    <button class="song-btn" data-song="old_macdonald">Old MacDonald</button>
     <button class="song-btn" data-song="ants">Ants Go Marching</button>
     <button class="song-btn" data-song="row">Row Your Boat</button>
     <button class="song-btn" data-song="wheels">Wheels on the Bus</button>
@@ -123,6 +124,26 @@
           Bb4=466.16, G3=196.00;
 
     const SONGS = {
+      old_macdonald: {
+        label: 'Old MacDonald',
+        notes: [
+          // "Old MacDonald had a farm"
+          G4, G4, G4, D4, E4, E4, D4,
+          // "E-I-E-I-O"
+          B4, B4, A4, A4, G4,
+          // "And on his farm he had a duck"
+          D4, D4, G4, G4, G4, D4, E4, E4, D4,
+          // "E-I-E-I-O"
+          B4, B4, A4, A4, G4,
+          // "With a quack quack here, and a quack quack there"
+          E4, E4, D4, D4, D4, E4, E4, D4, D4, D4,
+          // "Here a quack, there a quack, everywhere a quack quack"
+          G4, B4, A4, G4, B4, A4, G4, G4, A4, A4, G4,
+          // "Old MacDonald had a farm, E-I-E-I-O"
+          G4, G4, G4, D4, E4, E4, D4,
+          B4, B4, A4, A4, G4,
+        ],
+      },
       abc: {
         label: 'ABC Song',
         notes: [
