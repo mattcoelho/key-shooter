@@ -312,9 +312,13 @@
     function updateShot(shot) {
       const progress = Math.min(1, shot.age / shot.duration);
       const eased = shootEase(progress);
-      shot.scale = 1 - .5 * eased;
+      // Keep the entire bubble inside the viewport at launch, including edge keys.
+      const radius = Math.min(102, Math.max(1, (width - 16) / 2), Math.max(1, (height - 16) / 2));
+      const startY = Math.max(radius + 8, Math.min(height - radius - 8, height - 80 - radius));
+      shot.x = Math.max(radius + 8, Math.min(width - radius - 8, shot.xFraction * width));
+      shot.scale = (radius / 102) * (1 - .5 * eased);
       shot.r = 102 * shot.scale;
-      shot.y = height - (80 + (height * 1.1 - 80) * eased) - 102;
+      shot.y = startY + (-height * .1 - radius - startY) * eased;
       shot.opacity = progress <= .8 ? 1 : 1 - shootEase((progress - .8) / .2);
     }
 
@@ -334,7 +338,7 @@
       if (AC.state === 'suspended') AC.resume();
       pew();
       document.getElementById('count').textContent = ++shots;
-      const shot = {x, age: 0, duration: Number((Math.random() * 3 + 4).toFixed(2)),
+      const shot = {xFraction: x / width, age: 0, duration: Number((Math.random() * 3 + 4).toFixed(2)),
         color: palette[ci++ % palette.length], label};
       updateShot(shot);
       bullets.push(shot);
