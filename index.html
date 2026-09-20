@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Key Shooter</title>
+  <title>Key Shooter · Balloon Patrol</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a6bbf'/%3E%3Cellipse cx='16' cy='19' rx='10' ry='5' fill='white'/%3E%3Ccircle cx='11' cy='17' r='5' fill='white'/%3E%3Ccircle cx='18' cy='15' r='6' fill='white'/%3E%3Ccircle cx='23' cy='17' r='4' fill='white'/%3E%3C/svg%3E">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,42 +69,21 @@
       text-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
 
-    .bullet {
-      position: fixed;
-      width: 204px;
-      height: 204px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      color: #fff;
-      text-align: center;
-      line-height: 1.1;
-      pointer-events: none;
-      animation: shoot var(--dur) cubic-bezier(0.15, 0.7, 0.35, 1) forwards;
-    }
-    .bullet::after {
-      content: '';
-      position: absolute;
-      bottom: -78px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 18px;
-      height: 90px;
-      background: inherit;
-      border-radius: 9px;
-      opacity: 0.4;
-      filter: blur(6px);
-    }
-    @keyframes shoot {
-      0%   { bottom: 80px; opacity: 1; transform: scale(1); }
-      80%  { opacity: 1; }
-      100% { bottom: 110vh; opacity: 0; transform: scale(0.5); }
+    #game { position: fixed; inset: 0; touch-action: none; }
+    #hint, #score { z-index: 2; }
+    #score { top: 70px; }
+    #songs { max-width: calc(100% - 24px); overflow-x: auto; }
+    .song-btn { flex-shrink: 0; }
+    @media (max-width: 600px) {
+      #songs { left: 12px; transform: none; }
+      .song-btn { padding: 8px 12px; }
+      #hint { font-size: 10px; letter-spacing: 1px; padding: 0 12px; }
+      #score { right: 16px; }
     }
   </style>
 </head>
 <body>
+  <canvas id="game" aria-label="Balloon shooting drifting asteroids"></canvas>
   <div id="songs">
     <button class="song-btn active" data-song="abc">ABC Song</button>
     <button class="song-btn" data-song="old_macdonald">Old MacDonald</button>
@@ -111,8 +91,8 @@
     <button class="song-btn" data-song="row">Row Your Boat</button>
     <button class="song-btn" data-song="wheels">Wheels on the Bus</button>
   </div>
-  <div id="hint">Press any key to shoot</div>
-  <div id="score">SHOTS: <span id="count">0</span></div>
+  <div id="hint">Press a key or tap the sky to aim &amp; shoot</div>
+  <div id="score">HITS: <span id="hits">0</span> &nbsp; SHOTS: <span id="count">0</span></div>
 
   <script>
     // ── Audio ────────────────────────────────────────────────────
@@ -306,42 +286,135 @@
       '#ff6b6b','#ffd93d','#6bcb77','#4d96ff',
       '#ff9a3c','#c77dff','#00b4d8','#f72585','#56cfe1','#80ffdb'
     ];
-    let ci = 0, shots = 0;
+    let ci = 0, shots = 0, hits = 0;
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let width, height, balloonX, lastTime, spawnClock = 0;
+    const bullets = [], asteroids = [], sparks = [];
+    function resize() {
+      width = innerWidth; height = innerHeight;
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      canvas.width = width * dpr; canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      balloonX = Math.max(40, Math.min(width - 40, balloonX ?? width / 2));
+    }
+    addEventListener('resize', resize);
+    resize();
+    const launcherY = () => Math.max(130, height - 105);
 
-    document.addEventListener('keydown', e => {
-      if (e.repeat) return;
-      // Don't hijack button clicks via keyboard (Tab/Enter on focused button handled by browser)
-      if (document.activeElement && document.activeElement.classList.contains('song-btn')) return;
-      e.preventDefault();
-
+    function spawnAsteroid() {
+      const r = 20 + Math.random() * 24;
+      const x = Math.random() * width;
+      // Every rock enters above the screen, heading toward a different point below.
+      const travelTime = 7 + Math.random() * 5;
+      asteroids.push({ x, y: -r - 10, r,
+        vx: (Math.random() * width - x) / travelTime,
+        vy: (height + r * 3) / travelTime,
+        angle: Math.random() * Math.PI * 2, spin: (Math.random() - .5) * 1.6,
+        shape: Array.from({length: 11}, () => .78 + Math.random() * .22) });
+    }
+    function fire(x, label) {
+      if (document.hidden) return;
       if (AC.state === 'suspended') AC.resume();
-
       pew();
-      shots++;
-      document.getElementById('count').textContent = shots;
-
-      const label = getLabel(e);
-      const color = palette[ci++ % palette.length];
-      const xFrac = CODE_X[e.code] ?? 0.5;
-      const x     = xFrac * window.innerWidth;
-      const dur   = (Math.random() * 3 + 4).toFixed(2);
-
-      const b = document.createElement('div');
-      b.className = 'bullet';
-      b.textContent = label;
-      b.style.cssText = `
-        left:${x - 102}px;
-        font-size:${getFontSize(label)};
-        background:${color};
-        box-shadow:0 0 14px ${color},0 0 36px ${color}88;
-        --dur:${dur}s;
-      `;
-
-      const live = document.querySelectorAll('.bullet');
-      if (live.length >= 6) live[0].remove();
-      document.body.appendChild(b);
-      b.addEventListener('animationend', () => b.remove());
+      document.getElementById('count').textContent = ++shots;
+      balloonX = Math.max(40, Math.min(width - 40, x));
+      bullets.push({x: balloonX, y: launcherY() - 47, r: 18,
+        color: palette[ci++ % palette.length], label});
+      if (bullets.length > 60) bullets.shift();
+    }
+    document.addEventListener('keydown', e => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.key === 'Tab') return;
+      if (document.activeElement?.classList.contains('song-btn')) return;
+      e.preventDefault();
+      fire((CODE_X[e.code] ?? .5) * width, getLabel(e));
     });
+    canvas.addEventListener('pointerdown', e => fire(e.clientX, '★'));
+
+    function burst(rock, color) {
+      for (let i = 0; i < 16; i++) {
+        const angle = Math.random() * Math.PI * 2, speed = 50 + Math.random() * 150;
+        sparks.push({x: rock.x, y: rock.y, vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed, life: .65, color, r: 2 + Math.random() * 5});
+      }
+    }
+    function drawBalloon() {
+      const y = launcherY();
+      ctx.save(); ctx.translate(balloonX, y);
+      ctx.strokeStyle = '#f9e5b0'; ctx.lineWidth = 2;
+      for (const x of [-19, 19]) {
+        ctx.beginPath(); ctx.moveTo(x, 16); ctx.lineTo(x * .6, 43); ctx.stroke();
+      }
+      ctx.fillStyle = '#b56c38'; ctx.fillRect(-15, 39, 30, 21);
+      ctx.fillStyle = '#ffcb77'; ctx.fillRect(-17, 37, 34, 6);
+      ctx.fillStyle = '#ff657b'; ctx.beginPath(); ctx.ellipse(0, -8, 35, 42, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(0, -8, 16, 41, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.ellipse(-19, -23, 6, 13, .4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#29577e'; ctx.fillRect(-6, -57, 12, 17);
+      ctx.restore();
+    }
+    function frame(time) {
+      const dt = lastTime === undefined ? 0 : Math.min((time - lastTime) / 1000, .04);
+      lastTime = time;
+      if (!document.hidden) {
+        spawnClock -= dt;
+        if (spawnClock <= 0) { spawnAsteroid(); spawnClock = .7 + Math.random() * .7; }
+        ctx.clearRect(0, 0, width, height);
+        for (let i = asteroids.length - 1; i >= 0; i--) {
+          const rock = asteroids[i];
+          rock.x += rock.vx * dt; rock.y += rock.vy * dt; rock.angle += rock.spin * dt;
+          if (rock.y - rock.r > height || rock.x < -rock.r * 2 || rock.x > width + rock.r * 2) { asteroids.splice(i, 1); continue; }
+        }
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const shot = bullets[i], previousY = shot.y;
+          shot.y -= 540 * dt;
+          // Sweep the shot's path so fast shots cannot skip over a rock.
+          const hit = asteroids.findIndex(rock => {
+            const closestY = Math.max(shot.y, Math.min(previousY, rock.y));
+            return Math.hypot(shot.x - rock.x, closestY - rock.y) < rock.r + shot.r;
+          });
+          if (hit !== -1) {
+            burst(asteroids[hit], shot.color); asteroids.splice(hit, 1); bullets.splice(i, 1);
+            document.getElementById('hits').textContent = ++hits;
+          } else if (shot.y < -40) bullets.splice(i, 1);
+        }
+        for (const rock of asteroids) {
+          ctx.save(); ctx.translate(rock.x, rock.y); ctx.rotate(rock.angle);
+          ctx.fillStyle = '#796e80'; ctx.strokeStyle = '#b9a8b4'; ctx.lineWidth = 3;
+          ctx.beginPath();
+          rock.shape.forEach((radius, i) => {
+            const angle = i / rock.shape.length * Math.PI * 2;
+            const x = Math.cos(angle) * rock.r * radius, y = Math.sin(angle) * rock.r * radius;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          });
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#514d65';
+          for (const [x,y,r] of [[-.3,-.2,.23],[.35,.15,.17],[-.15,.45,.12]]) {
+            ctx.beginPath(); ctx.arc(x * rock.r, y * rock.r, r * rock.r, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        }
+        for (const shot of bullets) {
+          ctx.fillStyle = shot.color; ctx.globalAlpha = .3;
+          ctx.fillRect(shot.x - 5, shot.y, 10, 42); ctx.globalAlpha = 1;
+          ctx.beginPath(); ctx.arc(shot.x, shot.y, shot.r, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.font = 'bold ' + (shot.label.length > 2 ? 10 : 18) + 'px monospace';
+          ctx.fillText(shot.label, shot.x, shot.y);
+        }
+        for (let i = sparks.length - 1; i >= 0; i--) {
+          const p = sparks[i]; p.life -= dt;
+          if (p.life <= 0) { sparks.splice(i, 1); continue; }
+          p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 100 * dt;
+          ctx.globalAlpha = p.life / .65; ctx.fillStyle = p.color;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1; drawBalloon();
+      }
+      requestAnimationFrame(frame);
+    }
+    document.addEventListener('visibilitychange', () => { lastTime = undefined; });
+    requestAnimationFrame(frame);
   </script>
 </body>
 </html>
