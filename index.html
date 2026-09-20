@@ -257,6 +257,16 @@
       'Numpad0':0.760,'NumpadDecimal':0.820,
     };
 
+    // Physical keyboard rows, from the function row down to the space bar.
+    const CODE_ROW = Object.fromEntries([
+      'Escape F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 PrintScreen ScrollLock Pause',
+      'Backquote Digit1 Digit2 Digit3 Digit4 Digit5 Digit6 Digit7 Digit8 Digit9 Digit0 Minus Equal Backspace Insert Home PageUp NumLock NumpadDivide NumpadMultiply NumpadSubtract',
+      'Tab KeyQ KeyW KeyE KeyR KeyT KeyY KeyU KeyI KeyO KeyP BracketLeft BracketRight Backslash Delete End PageDown Numpad7 Numpad8 Numpad9 NumpadAdd',
+      'CapsLock KeyA KeyS KeyD KeyF KeyG KeyH KeyJ KeyK KeyL Semicolon Quote Enter Numpad4 Numpad5 Numpad6',
+      'ShiftLeft KeyZ KeyX KeyC KeyV KeyB KeyN KeyM Comma Period Slash ShiftRight ArrowUp Numpad1 Numpad2 Numpad3 NumpadEnter',
+      'ControlLeft AltLeft MetaLeft Space MetaRight AltRight ControlRight ArrowLeft ArrowDown ArrowRight Numpad0 NumpadDecimal',
+    ].flatMap((keys, row) => keys.split(' ').map(code => [code, row])));
+
     const KEY_LABEL = {
       ' ':'SPC','Tab':'⇥','Enter':'↵','Backspace':'⌫','Delete':'⌦',
       'Escape':'ESC','CapsLock':'⇪','Shift':'⇧',
@@ -314,8 +324,11 @@
       const eased = shootEase(progress);
       // Keep the entire bubble inside the viewport at launch, including edge keys.
       const radius = Math.min(102, Math.max(1, (width - 16) / 2), Math.max(1, (height - 16) / 2));
-      const startY = Math.max(radius + 8, Math.min(height - radius - 8, height - 80 - radius));
-      shot.x = Math.max(radius + 8, Math.min(width - radius - 8, shot.xFraction * width));
+      const bottomRowY = Math.max(radius + 8, height - radius - 24);
+      const rowSpacing = Math.min(22, Math.max(0, (bottomRowY - radius - 8) / 5));
+      const startY = bottomRowY - (5 - shot.row) * rowSpacing;
+      // Fit the keyboard across the safe launch area; do not collapse edge keys together.
+      shot.x = radius + 8 + shot.xFraction * Math.max(0, width - 2 * (radius + 8));
       shot.scale = (radius / 102) * (1 - .5 * eased);
       shot.r = 102 * shot.scale;
       shot.y = startY + (-height * .1 - radius - startY) * eased;
@@ -333,10 +346,10 @@
         angle: Math.random() * Math.PI * 2, spin: (Math.random() - .5) * 1.6,
         shape: Array.from({length: 11}, () => .78 + Math.random() * .22) });
     }
-    function fire(x, label) {
+    function fire(x, label, row = 3) {
       if (document.hidden) return;
       document.getElementById('count').textContent = ++shots;
-      const shot = {xFraction: x / width, age: 0, duration: Number((Math.random() * 3 + 4).toFixed(2)),
+      const shot = {xFraction: x / width, row, age: 0, duration: Number((Math.random() * 3 + 4).toFixed(2)),
         color: palette[ci++ % palette.length], label};
       updateShot(shot);
       bullets.push(shot);
@@ -354,7 +367,7 @@
       if (document.activeElement?.classList.contains('song-btn') &&
           ['Tab', 'Enter', ' '].includes(e.key)) return;
       e.preventDefault();
-      fire((CODE_X[e.code] ?? .5) * width, getLabel(e));
+      fire((CODE_X[e.code] ?? .5) * width, getLabel(e), CODE_ROW[e.code] ?? 3);
     });
 
     function burst(rock, color) {
