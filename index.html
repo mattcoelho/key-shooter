@@ -412,9 +412,12 @@
             return Math.hypot(shot.x - rock.x, closestY - rock.y) < rock.r + shot.r;
           });
           if (hit !== -1) {
-            // Keep the key balloon visible for its original flight even after a hit.
-            burst(asteroids[hit], shot.color); asteroids.splice(hit, 1);
+            burst(asteroids[hit], '#b9a8b4');
+            burst(shot, shot.color);
+            asteroids.splice(hit, 1);
+            bullets.splice(i, 1);
             document.getElementById('hits').textContent = ++hits;
+            continue;
           }
           if (shot.age >= shot.duration) bullets.splice(i, 1);
         }
