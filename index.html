@@ -91,7 +91,7 @@
     <button class="song-btn" data-song="row">Row Your Boat</button>
     <button class="song-btn" data-song="wheels">Wheels on the Bus</button>
   </div>
-  <div id="hint">Press a key or tap the sky to aim &amp; shoot</div>
+  <div id="hint">Press any key to shoot</div>
   <div id="score">HITS: <span id="hits">0</span> &nbsp; SHOTS: <span id="count">0</span></div>
 
   <script>
@@ -289,18 +289,34 @@
     let ci = 0, shots = 0, hits = 0;
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    let width, height, balloonX, lastTime, spawnClock = 0;
+    let width, height, lastTime, spawnClock = 0;
     const bullets = [], asteroids = [], sparks = [];
     function resize() {
       width = innerWidth; height = innerHeight;
       const dpr = Math.min(devicePixelRatio || 1, 2);
       canvas.width = width * dpr; canvas.height = height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      balloonX = Math.max(40, Math.min(width - 40, balloonX ?? width / 2));
     }
     addEventListener('resize', resize);
     resize();
-    const launcherY = () => Math.max(130, height - 105);
+    // Match the original CSS cubic-bezier(0.15, 0.7, 0.35, 1).
+    function shootEase(progress) {
+      const curve = (t, a, b) => 3 * (1-t) ** 2 * t * a + 3 * (1-t) * t*t * b + t ** 3;
+      let low = 0, high = 1;
+      for (let i = 0; i < 24; i++) {
+        const mid = (low + high) / 2;
+        if (curve(mid, .15, .35) < progress) low = mid; else high = mid;
+      }
+      return curve((low + high) / 2, .7, 1);
+    }
+    function updateShot(shot) {
+      const progress = Math.min(1, shot.age / shot.duration);
+      const eased = shootEase(progress);
+      shot.scale = 1 - .5 * eased;
+      shot.r = 102 * shot.scale;
+      shot.y = height - (80 + (height * 1.1 - 80) * eased) - 102;
+      shot.opacity = progress <= .8 ? 1 : 1 - shootEase((progress - .8) / .2);
+    }
 
     function spawnAsteroid() {
       const r = 20 + Math.random() * 24;
@@ -318,18 +334,18 @@
       if (AC.state === 'suspended') AC.resume();
       pew();
       document.getElementById('count').textContent = ++shots;
-      balloonX = Math.max(40, Math.min(width - 40, x));
-      bullets.push({x: balloonX, y: launcherY() - 47, r: 18,
-        color: palette[ci++ % palette.length], label});
-      if (bullets.length > 60) bullets.shift();
+      const shot = {x, age: 0, duration: Number((Math.random() * 3 + 4).toFixed(2)),
+        color: palette[ci++ % palette.length], label};
+      updateShot(shot);
+      bullets.push(shot);
+      if (bullets.length > 6) bullets.shift();
     }
     document.addEventListener('keydown', e => {
-      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.key === 'Tab') return;
+      if (e.repeat) return;
       if (document.activeElement?.classList.contains('song-btn')) return;
       e.preventDefault();
       fire((CODE_X[e.code] ?? .5) * width, getLabel(e));
     });
-    canvas.addEventListener('pointerdown', e => fire(e.clientX, '★'));
 
     function burst(rock, color) {
       for (let i = 0; i < 16; i++) {
@@ -337,21 +353,6 @@
         sparks.push({x: rock.x, y: rock.y, vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed, life: .65, color, r: 2 + Math.random() * 5});
       }
-    }
-    function drawBalloon() {
-      const y = launcherY();
-      ctx.save(); ctx.translate(balloonX, y);
-      ctx.strokeStyle = '#f9e5b0'; ctx.lineWidth = 2;
-      for (const x of [-19, 19]) {
-        ctx.beginPath(); ctx.moveTo(x, 16); ctx.lineTo(x * .6, 43); ctx.stroke();
-      }
-      ctx.fillStyle = '#b56c38'; ctx.fillRect(-15, 39, 30, 21);
-      ctx.fillStyle = '#ffcb77'; ctx.fillRect(-17, 37, 34, 6);
-      ctx.fillStyle = '#ff657b'; ctx.beginPath(); ctx.ellipse(0, -8, 35, 42, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(0, -8, 16, 41, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.ellipse(-19, -23, 6, 13, .4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#29577e'; ctx.fillRect(-6, -57, 12, 17);
-      ctx.restore();
     }
     function frame(time) {
       const dt = lastTime === undefined ? 0 : Math.min((time - lastTime) / 1000, .04);
@@ -367,7 +368,8 @@
         }
         for (let i = bullets.length - 1; i >= 0; i--) {
           const shot = bullets[i], previousY = shot.y;
-          shot.y -= 540 * dt;
+          shot.age += dt;
+          updateShot(shot);
           // Sweep the shot's path so fast shots cannot skip over a rock.
           const hit = asteroids.findIndex(rock => {
             const closestY = Math.max(shot.y, Math.min(previousY, rock.y));
@@ -376,7 +378,7 @@
           if (hit !== -1) {
             burst(asteroids[hit], shot.color); asteroids.splice(hit, 1); bullets.splice(i, 1);
             document.getElementById('hits').textContent = ++hits;
-          } else if (shot.y < -40) bullets.splice(i, 1);
+          } else if (shot.age >= shot.duration) bullets.splice(i, 1);
         }
         for (const rock of asteroids) {
           ctx.save(); ctx.translate(rock.x, rock.y); ctx.rotate(rock.angle);
@@ -395,11 +397,13 @@
           ctx.restore();
         }
         for (const shot of bullets) {
-          ctx.fillStyle = shot.color; ctx.globalAlpha = .3;
-          ctx.fillRect(shot.x - 5, shot.y, 10, 42); ctx.globalAlpha = 1;
+          ctx.fillStyle = shot.color; ctx.globalAlpha = .3 * shot.opacity;
+          ctx.fillRect(shot.x - 9 * shot.scale, shot.y + shot.r,
+            18 * shot.scale, 78 * shot.scale);
+          ctx.globalAlpha = shot.opacity;
           ctx.beginPath(); ctx.arc(shot.x, shot.y, shot.r, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.font = 'bold ' + (shot.label.length > 2 ? 10 : 18) + 'px monospace';
+          ctx.font = '900 ' + (parseFloat(getFontSize(shot.label)) * shot.scale) + 'px monospace';
           ctx.fillText(shot.label, shot.x, shot.y);
         }
         for (let i = sparks.length - 1; i >= 0; i--) {
@@ -409,7 +413,7 @@
           ctx.globalAlpha = p.life / .65; ctx.fillStyle = p.color;
           ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.globalAlpha = 1; drawBalloon();
+        ctx.globalAlpha = 1;
       }
       requestAnimationFrame(frame);
     }
