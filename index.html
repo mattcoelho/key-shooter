@@ -335,18 +335,24 @@
     }
     function fire(x, label) {
       if (document.hidden) return;
-      if (AC.state === 'suspended') AC.resume();
-      pew();
       document.getElementById('count').textContent = ++shots;
       const shot = {xFraction: x / width, age: 0, duration: Number((Math.random() * 3 + 4).toFixed(2)),
         color: palette[ci++ % palette.length], label};
       updateShot(shot);
       bullets.push(shot);
       if (bullets.length > 6) bullets.shift();
+      // Audio must never prevent the visual response to a keypress.
+      try {
+        if (AC.state === 'suspended') AC.resume().catch(() => {});
+        pew();
+      } catch (error) {
+        console.warn('Shot audio unavailable', error);
+      }
     }
     document.addEventListener('keydown', e => {
       if (e.repeat) return;
-      if (document.activeElement?.classList.contains('song-btn')) return;
+      if (document.activeElement?.classList.contains('song-btn') &&
+          ['Tab', 'Enter', ' '].includes(e.key)) return;
       e.preventDefault();
       fire((CODE_X[e.code] ?? .5) * width, getLabel(e));
     });
@@ -380,9 +386,11 @@
             return Math.hypot(shot.x - rock.x, closestY - rock.y) < rock.r + shot.r;
           });
           if (hit !== -1) {
-            burst(asteroids[hit], shot.color); asteroids.splice(hit, 1); bullets.splice(i, 1);
+            // Keep the key balloon visible for its original flight even after a hit.
+            burst(asteroids[hit], shot.color); asteroids.splice(hit, 1);
             document.getElementById('hits').textContent = ++hits;
-          } else if (shot.age >= shot.duration) bullets.splice(i, 1);
+          }
+          if (shot.age >= shot.duration) bullets.splice(i, 1);
         }
         for (const rock of asteroids) {
           ctx.save(); ctx.translate(rock.x, rock.y); ctx.rotate(rock.angle);
